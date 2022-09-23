@@ -57,6 +57,12 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define CALIB_BUTTON_Pin GPIO_PIN_14
+#define CALIB_BUTTON_GPIO_Port GPIOC
+#define SHIFTER_CS_Pin GPIO_PIN_11
+#define SHIFTER_CS_GPIO_Port GPIOB
+#define LED_PIN_Pin GPIO_PIN_15
+#define LED_PIN_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

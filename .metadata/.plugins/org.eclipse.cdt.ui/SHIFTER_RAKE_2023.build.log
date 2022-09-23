@@ -1,4 +1,4 @@
-10:02:53 **** Incremental Build of configuration Debug for project SHIFTER_RAKE_2023 ****
+12:21:29 **** Incremental Build of configuration Debug for project SHIFTER_RAKE_2023 ****
 make -j4 all 
 arm-none-eabi-gcc "../USB_DEVICE/Target/usbd_conf.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB -c -I../USB_DEVICE/App -I../USB_DEVICE/Target -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I../Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Inc -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -MMD -MP -MF"USB_DEVICE/Target/usbd_conf.d" -MT"USB_DEVICE/Target/usbd_conf.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "USB_DEVICE/Target/usbd_conf.o"
 arm-none-eabi-gcc "../USB_DEVICE/App/usb_device.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB -c -I../USB_DEVICE/App -I../USB_DEVICE/Target -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I../Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Inc -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -MMD -MP -MF"USB_DEVICE/App/usb_device.d" -MT"USB_DEVICE/App/usb_device.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "USB_DEVICE/App/usb_device.o"
@@ -15,11 +15,11 @@ Finished building target: SHIFTER_RAKE_2023.elf
 arm-none-eabi-size   SHIFTER_RAKE_2023.elf 
 arm-none-eabi-objdump -h -S  SHIFTER_RAKE_2023.elf  > "SHIFTER_RAKE_2023.list"
    text	   data	    bss	    dec	    hex	filename
-  33856	    360	   3992	  38208	   9540	SHIFTER_RAKE_2023.elf
+  34088	    360	   3992	  38440	   9628	SHIFTER_RAKE_2023.elf
 Finished building: default.size.stdout
  
 Finished building: SHIFTER_RAKE_2023.list
  
 
-10:02:59 Build Finished. 0 errors, 0 warnings. (took 6s.331ms)
+12:21:35 Build Finished. 0 errors, 0 warnings. (took 5s.990ms)
 

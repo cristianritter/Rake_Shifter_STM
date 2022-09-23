@@ -67,6 +67,73 @@ static void MX_USART1_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+typedef struct
+{
+	uint8_t botoes0; //1 - 8 botoes
+	uint8_t botoes1; //9 - 16 botoes
+	uint8_t botoes_freio0; //lsb 17 - 19 botoes
+} joystickHID;
+joystickHID joystickhid = {0, 0, 0};
+
+uint16_t  speed_div_x[2] = {1600, 2400};
+uint16_t  speed_div_y[2] = {900, 2500};
+
+
+int32_t ADCValue[3] = {0, 0, 0};
+//int8_t buffer[6];
+uint8_t rx_buffer[3];
+uint8_t spi_select;
+
+void LerADCS(){
+  ADCValue[0] = HAL_ADC_GetValue(&hadc1); // axis 1 cambio
+  ADCValue[1] = HAL_ADC_GetValue(&hadc1); // axis 2 cambio
+  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);  //pb3 sck pin1 g27
+  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);  //pb3 sck pin1 g27
+  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);  //pb3 sck pin1 g27
+  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);  //pb3 sck pin1 g27
+  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);  //pb3 sck pin1 g27
+  HAL_SPI_Receive(&hspi2, rx_buffer, 3, 1);  //pb3 sck pin1 g27
+  ADCValue[3] = HAL_ADC_GetValue(&hadc1); // sck pin 9 reading -> ~0=desconectado, ~4096=g25, ~2048=g27
+//  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[0]), 100);
+//  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[1]), 100);
+//  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[2]), 100);
+//  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[3]), 100);
+//  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[4]), 100);
+//  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[5]), 100);
+//  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[6]), 100);
+  if (ADCValue[3] > 3850){
+	  spi_select = 1;
+  }
+  else
+  {
+	  spi_select = 2;
+  }
+//  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", spi_select), 100);
+//  HAL_UART_Transmit(&huart1, "      ", 6, 100);
+//  HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
+  HAL_Delay(1);
+}
+
+void LerSPI(int select){
+  HAL_GPIO_WritePin(SHIFTER_CS_GPIO_Port, SHIFTER_CS_Pin, GPIO_PIN_SET);
+  HAL_Delay(1);
+  if (select == 1){
+    HAL_SPI_Receive(&hspi1, rx_buffer, 3, 50);
+  }
+  if (select == 2){
+    HAL_SPI_Receive(&hspi2, rx_buffer, 3, 50);
+  }
+  HAL_Delay(1);
+  HAL_GPIO_WritePin(SHIFTER_CS_GPIO_Port, SHIFTER_CS_Pin, GPIO_PIN_RESET);
+  HAL_Delay(1);
+
+  //HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", rx_buffer[1]), 100);
+  //HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", rx_buffer[2]), 100);
+  //HAL_UART_Transmit(&huart1, "      ", 6, 100);
+  //HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
+}
+
+
 /* USER CODE END 0 */
 
 /**
@@ -248,7 +315,7 @@ static void MX_SPI1_Init(void)
   /* SPI1 parameter configuration*/
   hspi1.Instance = SPI1;
   hspi1.Init.Mode = SPI_MODE_MASTER;
-  hspi1.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi1.Init.Direction = SPI_DIRECTION_2LINES_RXONLY;
   hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
@@ -286,7 +353,7 @@ static void MX_SPI2_Init(void)
   /* SPI2 parameter configuration*/
   hspi2.Instance = SPI2;
   hspi2.Init.Mode = SPI_MODE_MASTER;
-  hspi2.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi2.Init.Direction = SPI_DIRECTION_2LINES_RXONLY;
   hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
   hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
@@ -362,11 +429,33 @@ static void MX_DMA_Init(void)
   */
 static void MX_GPIO_Init(void)
 {
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(CALIB_BUTTON_GPIO_Port, CALIB_BUTTON_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, SHIFTER_CS_Pin|LED_PIN_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : CALIB_BUTTON_Pin */
+  GPIO_InitStruct.Pin = CALIB_BUTTON_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(CALIB_BUTTON_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : SHIFTER_CS_Pin LED_PIN_Pin */
+  GPIO_InitStruct.Pin = SHIFTER_CS_Pin|LED_PIN_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 }
 
