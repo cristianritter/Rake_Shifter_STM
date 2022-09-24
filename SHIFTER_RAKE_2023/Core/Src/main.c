@@ -32,6 +32,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define FLASH_STORAGE 0x08019000
+#define page_size 0x400
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -67,41 +70,63 @@ static void MX_USART1_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+void read_flash(uint8_t* data)
+{
+	volatile uint32_t read_data;
+	volatile uint32_t read_cnt=0;
+	do
+	{
+		read_data = *(uint32_t*)(FLASH_STORAGE + read_cnt);
+		if(read_data != 0xFFFFFFFF)
+		{
+			data[read_cnt] = (uint8_t)read_data;
+			data[read_cnt + 1] = (uint8_t)(read_data >> 8);
+			data[read_cnt + 2] = (uint8_t)(read_data >> 16);
+			data[read_cnt + 3] = (uint8_t)(read_data >> 24);
+			read_cnt += 4;
+		}
+	}while(read_data != 0xFFFFFFFF);
+}
+
+extern USBD_HandleTypeDef hUsbDeviceFS;
+
+
 typedef struct
 {
 	uint8_t botoes0; //1 - 8 botoes
 	uint8_t botoes1; //9 - 16 botoes
 	uint8_t botoes_freio0; //lsb 17 - 19 botoes
+	uint8_t dummy32;
+	uint8_t dummy40;
+	uint8_t dummy48;
+	uint8_t dummy56;
+	uint8_t dummy64;
 } joystickHID;
-joystickHID joystickhid = {0, 0, 0};
+joystickHID joystickhid = {0, 0, 0, 0, 0, 0, 0, 0};
 
-uint16_t  speed_div_x[2] = {1600, 2400};
-uint16_t  speed_div_y[2] = {900, 2500};
+uint16_t  speed_div_x[2] = {800, 1450};
+uint16_t  speed_div_y[2] = {900, 2000};
 
 
-int32_t ADCValue[3] = {0, 0, 0};
-//int8_t buffer[6];
+uint16_t ADCValue[3] = {0, 0, 0};
+int8_t buffer2[6];
 uint8_t rx_buffer[3];
 uint8_t spi_select;
 
 void LerADCS(){
-  ADCValue[0] = HAL_ADC_GetValue(&hadc1); // axis 1 cambio
-  ADCValue[1] = HAL_ADC_GetValue(&hadc1); // axis 2 cambio
+  ADCValue[0] = HAL_ADC_GetValue(&hadc1); // axis x cambio
+  ADCValue[1] = HAL_ADC_GetValue(&hadc1); // axis y cambio
   HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);  //pb3 sck pin1 g27
   HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);  //pb3 sck pin1 g27
   HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);  //pb3 sck pin1 g27
   HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);  //pb3 sck pin1 g27
   HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);  //pb3 sck pin1 g27
   HAL_SPI_Receive(&hspi2, rx_buffer, 3, 1);  //pb3 sck pin1 g27
-  ADCValue[3] = HAL_ADC_GetValue(&hadc1); // sck pin 9 reading -> ~0=desconectado, ~4096=g25, ~2048=g27
+  ADCValue[2] = HAL_ADC_GetValue(&hadc1); // sck pin 9 reading -> ~0=desconectado, ~4096=g25, ~2048=g27
 //  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[0]), 100);
 //  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[1]), 100);
 //  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[2]), 100);
-//  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[3]), 100);
-//  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[4]), 100);
-//  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[5]), 100);
-//  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[6]), 100);
-  if (ADCValue[3] > 3850){
+  if (ADCValue[2] > 3850){
 	  spi_select = 1;
   }
   else
@@ -117,6 +142,7 @@ void LerADCS(){
 void LerSPI(int select){
   HAL_GPIO_WritePin(SHIFTER_CS_GPIO_Port, SHIFTER_CS_Pin, GPIO_PIN_SET);
   HAL_Delay(1);
+  select = 1; // for working with g27
   if (select == 1){
     HAL_SPI_Receive(&hspi1, rx_buffer, 3, 50);
   }
@@ -127,10 +153,11 @@ void LerSPI(int select){
   HAL_GPIO_WritePin(SHIFTER_CS_GPIO_Port, SHIFTER_CS_Pin, GPIO_PIN_RESET);
   HAL_Delay(1);
 
-  //HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", rx_buffer[1]), 100);
-  //HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", rx_buffer[2]), 100);
-  //HAL_UART_Transmit(&huart1, "      ", 6, 100);
-  //HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
+  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", rx_buffer[0]), 100);
+  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", rx_buffer[1]), 100);
+  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", rx_buffer[2]), 100);
+  HAL_UART_Transmit(&huart1, "      ", 6, 100);
+  HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
 }
 
 
@@ -171,7 +198,7 @@ int main(void)
   MX_SPI2_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADCValue, 3);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -181,6 +208,165 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
+	  LerADCS();
+	  LerSPI(spi_select);
+
+	  uint16_t cambio_x_axis = (uint16_t) ADCValue[0];  //manopla x
+	  uint16_t cambio_y_axis = (uint16_t) ADCValue[1];  //manopla y
+
+	  if (cambio_x_axis < speed_div_x[0] && cambio_y_axis > speed_div_y[1]){  //speed 1
+		  joystickhid.botoes0 |= (uint8_t)(1<<0);	// SETA BOTAO 1
+	  }
+	  else {
+		  joystickhid.botoes0 &= ~(uint8_t)(1<<0);	// RESETA BOTAO 1
+	  }
+
+	  if (cambio_x_axis < speed_div_x[0] && cambio_y_axis < speed_div_y[0]){  //speed2
+		  joystickhid.botoes0 |= (uint8_t)(1<<1);	// SETA BOTAO 2
+	  }
+	  else {
+		  joystickhid.botoes0 &= ~(uint8_t)(1<<1);	// RESETA BOTAO 2
+	  }
+
+	  if (cambio_x_axis > speed_div_x[0] && cambio_x_axis < speed_div_x[1] && cambio_y_axis > speed_div_y[1]){  //speed 3
+		  joystickhid.botoes0 |= (uint8_t)(1<<2);	// SETA BOTAO 3
+	  }
+	  else {
+		  joystickhid.botoes0 &= ~(uint8_t)(1<<2);	// RESETA BOTAO 3
+	  }
+
+	  if (cambio_x_axis > speed_div_x[0] && cambio_x_axis < speed_div_x[1] && cambio_y_axis < speed_div_y[0]){  //speed 4
+		  joystickhid.botoes0 |= (uint8_t)(1<<3);	// SETA BOTAO 4
+	  }
+	  else {
+		  joystickhid.botoes0 &= ~(uint8_t)(1<<3);	// RESETA BOTAO 4
+	  }
+
+	  if (cambio_x_axis > speed_div_x[1] && cambio_y_axis > speed_div_y[1]){    //speed5
+		  joystickhid.botoes0 |= (uint8_t)(1<<4);	// SETA BOTAO 5
+	  }
+	  else {
+		  joystickhid.botoes0 &= ~(uint8_t)(1<<4);	// RESETA BOTAO 5
+	  }
+
+	  if (cambio_x_axis > speed_div_x[1] && cambio_y_axis < speed_div_y[0]){    // speed 6
+		  joystickhid.botoes0 |= (uint8_t)(1<<5);	// SETA BOTAO 6
+	  }
+	  else {
+		  joystickhid.botoes0 &= ~(uint8_t)(1<<5);	// RESETA BOTAO 6
+	  }
+
+	  if (rx_buffer[2] & (uint16_t)(1<<0))  {
+		  joystickhid.botoes0 |= (uint16_t) (1<<6);  // SETA BOTAO 7
+	  }
+	  else {
+		  joystickhid.botoes0 &= ~(uint16_t)(1<<6);	// RESETA BOTAO 7
+	  }
+
+	  if (rx_buffer[2] & (uint16_t)(1<<1))  {
+		  joystickhid.botoes0 |= (uint16_t)(1<<7);	// SETA BOTAO 8
+	  }
+	  else {
+		  joystickhid.botoes0 &= ~(uint16_t)(1<<7);	// RESETA BOTAO 8
+	  }
+
+	  if (rx_buffer[2] & (uint16_t)(1<<2))  {
+		  joystickhid.botoes1 |= (uint16_t)(1<<0);	// SETA BOTAO 9
+	  }
+	  else {
+		  joystickhid.botoes1 &= ~(uint16_t)(1<<0);	// RESETA BOTAO 9
+	  }
+
+	  if (rx_buffer[2] & (uint16_t)(1<<3))  {
+		  joystickhid.botoes1 |= (uint16_t)(1<<1);	// SETA BOTAO 10
+	  }
+	  else {
+		  joystickhid.botoes1 &= ~(uint16_t)(1<<1);	// RESETA BOTAO 10
+	  }
+
+	  if (rx_buffer[2] & (uint16_t)(1<<4))  {
+		  joystickhid.botoes1 |= (uint16_t)(1<<2);	// SETA BOTAO 11
+	  }
+	  else {
+		  joystickhid.botoes1 &= ~(uint16_t)(1<<2);	// RESETA BOTAO 11
+	  }
+
+	  if (rx_buffer[2] & (uint16_t)(1<<5))  {
+		  joystickhid.botoes1 |= (uint16_t)(1<<3);	// SETA BOTAO 12
+	  }
+	  else {
+		  joystickhid.botoes1 &= ~(uint16_t)(1<<3);	// RESETA BOTAO 12
+	  }
+
+	  if (rx_buffer[2] & (uint16_t)(1<<6))  {
+		  joystickhid.botoes1 |= (uint16_t)(1<<4);	// SETA BOTAO 13
+	  }
+	  else {
+		  joystickhid.botoes1 &= ~(uint16_t)(1<<4);	// RESETA BOTAO 13
+	  }
+
+	  if (rx_buffer[2] & (uint16_t)(1<<7))  {
+		  joystickhid.botoes1 |= (uint16_t)(1<<5);	// SETA BOTAO 14
+	  }
+	  else {
+		  joystickhid.botoes1 &= ~(uint16_t)(1<<5);	// RESETA BOTAO 14
+	  }
+
+	  if (rx_buffer[1] & (uint16_t)(1<<0))  {
+		  joystickhid.botoes1 |= (uint16_t)(1<<6);	// SETA BOTAO 15
+	  }
+	  else {
+		  joystickhid.botoes1 &= ~(uint16_t)(1<<6);	// RESETA BOTAO 15
+	  }
+
+	  if (rx_buffer[1] & (uint16_t)(1<<1))  {
+		  joystickhid.botoes1 |= (uint32_t)(1<<7);	// SETA BOTAO 16
+	  }
+	  else {
+		  joystickhid.botoes1 &= ~(uint16_t)(1<<7);	// RESETA BOTAO 16
+	  }
+
+	  if (rx_buffer[1] & (uint16_t)(1<<2))  {
+		  joystickhid.botoes_freio0 |= (uint16_t)(1<<0);	// SETA BOTAO 17
+	  }
+	  else {
+		  joystickhid.botoes_freio0 &= ~(uint16_t)(1<<0);	// RESETA BOTAO 17
+	  }
+
+	  if (rx_buffer[1] & (uint16_t)(1<<3))  {
+		  joystickhid.botoes_freio0 |= (uint32_t)(1<<1);	// SETA BOTAO 18
+	  }
+	  else {
+		  joystickhid.botoes_freio0 &= ~(uint16_t)(1<<1);	// RESETA BOTAO 18
+	  }
+
+	  if (rx_buffer[1] & (uint16_t)(1<<6) && cambio_x_axis > speed_div_x[1] && cambio_y_axis < speed_div_y[0])  {
+		  joystickhid.botoes_freio0 |= (uint16_t)(1<<2);	// SETA BOTAO 19 SPEED REVERSA
+		  joystickhid.botoes0 &= ~(uint8_t)(1<<5); 			// RESETA BOTAO SPEED 6 QUANDO ATIVA A REVERSA
+	  }
+	  else {
+		  joystickhid.botoes_freio0 &= ~(uint32_t)(1<<2);	// RESETA BOTAO 19 SPEED REVERSA
+	  }
+
+	  //if ( !HAL_GPIO_ReadPin(GPIOC, sw_ext_Pin)){
+	//	  joystickhid.botoes_freio0 |= (uint32_t)(1<<3);
+	 // }
+	  //else{
+	//	  joystickhid.botoes_freio0 &= ~(uint32_t)(1<<3);
+	 // }
+
+
+	  //if ( ADCValue[3] > 4090){  //se volante desconectado
+	  //joystickhid.botoes0 = 0xff;
+	  //	  joystickhid.botoes1 = 0;
+	  	//  joystickhid.botoes_freio0 &= 0b11110000;
+	 // }
+
+	  USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, &joystickhid, sizeof(joystickhid));
+
+	  HAL_Delay(1);
+
   }
   /* USER CODE END 3 */
 }
@@ -314,13 +500,12 @@ static void MX_SPI1_Init(void)
   /* USER CODE END SPI1_Init 1 */
   /* SPI1 parameter configuration*/
   hspi1.Instance = SPI1;
-  hspi1.Init.Mode = SPI_MODE_MASTER;
-  hspi1.Init.Direction = SPI_DIRECTION_2LINES_RXONLY;
+  hspi1.Init.Mode = SPI_MODE_SLAVE;
+  hspi1.Init.Direction = SPI_DIRECTION_2LINES;
   hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -352,13 +537,12 @@ static void MX_SPI2_Init(void)
   /* USER CODE END SPI2_Init 1 */
   /* SPI2 parameter configuration*/
   hspi2.Instance = SPI2;
-  hspi2.Init.Mode = SPI_MODE_MASTER;
-  hspi2.Init.Direction = SPI_DIRECTION_2LINES_RXONLY;
+  hspi2.Init.Mode = SPI_MODE_SLAVE;
+  hspi2.Init.Direction = SPI_DIRECTION_2LINES;
   hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
   hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi2.Init.NSS = SPI_NSS_SOFT;
-  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
   hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -446,14 +630,14 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin : CALIB_BUTTON_Pin */
   GPIO_InitStruct.Pin = CALIB_BUTTON_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(CALIB_BUTTON_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : SHIFTER_CS_Pin LED_PIN_Pin */
   GPIO_InitStruct.Pin = SHIFTER_CS_Pin|LED_PIN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 

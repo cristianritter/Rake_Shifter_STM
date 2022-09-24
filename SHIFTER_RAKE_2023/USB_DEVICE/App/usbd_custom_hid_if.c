@@ -94,7 +94,6 @@ __ALIGN_BEGIN static uint8_t CUSTOM_HID_ReportDesc_FS[USBD_CUSTOM_HID_REPORT_DES
 		0x05, 0x01,                    // USAGE_PAGE (Generic Desktop)
 		0x09, 0x05,                    // USAGE (Game Pad)
 	    0xa1, 0x01,                    // COLLECTION (Application)
-	    0xa1, 0x00,                    //   COLLECTION (Physical)
 	    0x05, 0x09,                    //      USAGE_PAGE (Button)
 	    0x19, 0x01,                    //      USAGE_MINIMUM (Button 1)
 	    0x29, 0x13,                    //      USAGE_MAXIMUM (Button 19)
@@ -105,8 +104,7 @@ __ALIGN_BEGIN static uint8_t CUSTOM_HID_ReportDesc_FS[USBD_CUSTOM_HID_REPORT_DES
 	    0x81, 0x02,                    //        INPUT (Data,Var,Abs)
 	 	0x95, 0x01,       		  	   //      REPORT_COUNT (1)
 		0x75, 0x2D,       			   //      REPORT_SIZE (45)
-		0x81, 0x03,       			   //        INPUT (Cnst,Var,Abs)
-		0xc0,                          //   END_COLLECTION 				SIZE 32
+		0x81, 0x03,       			   //        INPUT (Cnst,Var,Abs) size 29
   /* USER CODE END 0 */
   0xC0    /*     END_COLLECTION	             */
 };
@@ -139,7 +137,7 @@ extern USBD_HandleTypeDef hUsbDeviceFS;
 
 static int8_t CUSTOM_HID_Init_FS(void);
 static int8_t CUSTOM_HID_DeInit_FS(void);
-static int8_t CUSTOM_HID_OutEvent_FS(uint8_t event_idx, uint8_t state);
+static int8_t CUSTOM_HID_OutEvent_FS(uint8_t*  state);
 
 /**
   * @}
@@ -188,7 +186,7 @@ static int8_t CUSTOM_HID_DeInit_FS(void)
   * @param  state: Event state
   * @retval USBD_OK if all operations are OK else USBD_FAIL
   */
-static int8_t CUSTOM_HID_OutEvent_FS(uint8_t event_idx, uint8_t state)
+static int8_t CUSTOM_HID_OutEvent_FS(uint8_t* state)
 {
   /* USER CODE BEGIN 6 */
   return (USBD_OK);
