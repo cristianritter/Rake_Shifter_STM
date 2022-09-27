@@ -88,6 +88,48 @@ void read_flash(uint8_t* data)
 	}while(read_data != 0xFFFFFFFF);
 }
 
+void save_to_flash(uint8_t *data){
+	volatile uint32_t data_to_FLASH[(strlen((char*)data)/4)	+ (int)((strlen((char*)data) % 4) != 0)];
+	memset((uint8_t*)data_to_FLASH, 0, strlen((char*)data_to_FLASH));
+	strcpy((char*)data_to_FLASH, (char*)data);
+
+	volatile uint32_t data_length = (strlen((char*)data_to_FLASH) / 4)
+									+ (int)((strlen((char*)data_to_FLASH) % 4) != 0);
+	volatile uint16_t pages = (strlen((char*)data)/page_size)
+									+ (int)((strlen((char*)data)%page_size) != 0);
+	/* Unlock the Flash to enable the flash control register access *************/
+	HAL_FLASH_Unlock();
+
+	/* Allow Access to option bytes sector */
+	HAL_FLASH_OB_Unlock();
+
+	/* Fill EraseInit structure*/
+	FLASH_EraseInitTypeDef EraseInitStruct;
+	EraseInitStruct.TypeErase = FLASH_TYPEERASE_PAGES;
+	EraseInitStruct.PageAddress = FLASH_STORAGE;
+	EraseInitStruct.NbPages = pages;
+	uint32_t PageError;
+
+	volatile uint32_t write_cnt=0, index=0;
+
+	volatile HAL_StatusTypeDef status;
+	status = HAL_FLASHEx_Erase(&EraseInitStruct, &PageError);
+	while(index < data_length)
+	{
+		if (status == HAL_OK){
+			status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_STORAGE+write_cnt, data_to_FLASH[index]);
+			if(status == HAL_OK){
+				write_cnt += 4;
+				index++;
+			}
+		}
+	}
+
+	HAL_FLASH_OB_Lock();
+	HAL_FLASH_Lock();
+}
+
+
 extern USBD_HandleTypeDef hUsbDeviceFS;
 
 
@@ -104,10 +146,9 @@ typedef struct
 } joystickHID;
 joystickHID joystickhid = {0, 0, 0, 0, 0, 0, 0, 0};
 
-uint16_t  speed_div_x[2] = {800, 1450};
-uint16_t  speed_div_y[2] = {900, 2000};
-
-
+uint16_t speed_div_x[2] = {800, 1450};
+uint16_t speed_div_y[2] = {900, 2000};
+uint8_t read_flash_flag = 1;							// ativa o carregamento de informaçoes da memoria flash
 uint16_t ADCValue[3] = {0, 0, 0};
 int8_t buffer2[6];
 uint8_t rx_buffer[3];
@@ -160,6 +201,54 @@ void LerSPI(int select){
   HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
 }
 
+void Calibrar(void)
+{
+	if (HAL_GPIO_ReadPin(CALIB_BUTTON_GPIO_Port, CALIB_BUTTON_Pin)){			// se botão de calibração pressionado
+		HAL_Delay(500);
+		uint16_t axis_x_min_max[2] = {9999, 0};
+		uint16_t axis_y_min_max[2] = {9999, 0};
+		while (HAL_GPIO_ReadPin(CALIB_BUTTON_GPIO_Port, CALIB_BUTTON_Pin)){     // permanece na rotina de leitura até que o botão seja solto
+			HAL_GPIO_TogglePin(LED_PIN_GPIO_Port, LED_PIN_Pin);
+			HAL_Delay(50);
+			LerADCS();  									//le posicao dos eixos
+			if (ADCValue[0] < axis_x_min_max[0]){			// define o menor valor detectado no eixo x
+				axis_x_min_max[0] = ADCValue[0];
+			}
+			if (ADCValue[0] > axis_x_min_max[1]){			// define o maior valor detectado no eixo x
+				axis_x_min_max[1] = ADCValue[0];
+			}
+			if (ADCValue[1] < axis_y_min_max[0]){			// define o menor valor detectado no eixo y
+				axis_y_min_max[0] = ADCValue[1];
+			}
+			if (ADCValue[1] > axis_y_min_max[1]){			// define o maior valor detectado no eixo y
+				axis_y_min_max[1] = ADCValue[1];
+			}
+		}
+		HAL_GPIO_WritePin(LED_PIN_GPIO_Port, LED_PIN_Pin, 0);
+
+		uint16_t space_x = (axis_x_min_max[1]-axis_x_min_max[0])/3;
+		speed_div_x[0] = axis_x_min_max[0] + space_x; 					//calcula as linhas de calibracao do eixo x
+		//HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", speed_div_x[0]), 100);
+
+		speed_div_x[1] = axis_x_min_max[1] - space_x;
+		//HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", speed_div_x[1]), 100);
+
+		uint16_t space_y = (axis_y_min_max[1]-axis_y_min_max[0])/3;
+		speed_div_y[0] = axis_y_min_max[0] + space_y; 					//calcula as linhas de calibracao do eixo y
+		//HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", speed_div_y[0]), 100);
+
+		speed_div_y[1] = axis_y_min_max[1] - space_y;
+		//HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", speed_div_y[1]), 100);
+		//HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
+	}
+}
+
+void update_data_from_flash(uint16_t (* speed_div_x), uint16_t (* speed_div_y)){
+	char data[0xC0];
+	read_flash((uint8_t *)data);
+    char * token = strtok(data,",");				//first strtok go to variable directly
+    speed_div_x[0] = atoi(token)*10;
+}
 
 /* USER CODE END 0 */
 
@@ -199,6 +288,7 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADCValue, 3);
+  HAL_GPIO_WritePin(LED_PIN_GPIO_Port, LED_PIN_Pin, 0); //liga led
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -208,7 +298,11 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
+	  if (read_flash_flag){
+		  read_flash_flag = 0;
+		  update_data_from_flash(speed_div_x, speed_div_y);				//atualiza valores com os dados da memoria flash
+	  }
+	  Calibrar();
 	  LerADCS();
 	  LerSPI(spi_select);
 
@@ -500,12 +594,13 @@ static void MX_SPI1_Init(void)
   /* USER CODE END SPI1_Init 1 */
   /* SPI1 parameter configuration*/
   hspi1.Instance = SPI1;
-  hspi1.Init.Mode = SPI_MODE_SLAVE;
-  hspi1.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi1.Init.Mode = SPI_MODE_MASTER;
+  hspi1.Init.Direction = SPI_DIRECTION_2LINES_RXONLY;
   hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -537,12 +632,13 @@ static void MX_SPI2_Init(void)
   /* USER CODE END SPI2_Init 1 */
   /* SPI2 parameter configuration*/
   hspi2.Instance = SPI2;
-  hspi2.Init.Mode = SPI_MODE_SLAVE;
-  hspi2.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi2.Init.Mode = SPI_MODE_MASTER;
+  hspi2.Init.Direction = SPI_DIRECTION_2LINES_RXONLY;
   hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
   hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi2.Init.NSS = SPI_NSS_SOFT;
+  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
   hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
