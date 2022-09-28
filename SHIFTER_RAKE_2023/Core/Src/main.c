@@ -22,7 +22,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "string.h"
+#include "stdio.h"
+#include "stdlib.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,7 +47,6 @@
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
-
 SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi2;
 
@@ -146,65 +147,78 @@ typedef struct
 } joystickHID;
 joystickHID joystickhid = {0, 0, 0, 0, 0, 0, 0, 0};
 
-uint16_t speed_div_x[2] = {800, 1450};
-uint16_t speed_div_y[2] = {900, 2000};
 uint8_t read_flash_flag = 1;							// ativa o carregamento de informaçoes da memoria flash
+uint8_t spi_detection = 1;								// informa qual spi será testado neste ciclo para deteccao do modelo do shifter
+uint16_t spi_values[2] = {0, 0};
+uint16_t speed_div_x[2] = {800, 1450};					// pré definicao dos limites de selecao de velocidades do eixo x
+uint16_t speed_div_y[2] = {900, 2000};					//  -		-		-		-		-		-		-		-  y
 uint16_t ADCValue[3] = {0, 0, 0};
 int8_t buffer2[6];
 uint8_t rx_buffer[3];
-uint8_t spi_select;
 
 void LerADCS(){
-  ADCValue[0] = HAL_ADC_GetValue(&hadc1); // axis x cambio
-  ADCValue[1] = HAL_ADC_GetValue(&hadc1); // axis y cambio
-  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);  //pb3 sck pin1 g27
-  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);  //pb3 sck pin1 g27
-  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);  //pb3 sck pin1 g27
-  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);  //pb3 sck pin1 g27
-  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);  //pb3 sck pin1 g27
-  HAL_SPI_Receive(&hspi2, rx_buffer, 3, 1);  //pb3 sck pin1 g27
-  ADCValue[2] = HAL_ADC_GetValue(&hadc1); // sck pin 9 reading -> ~0=desconectado, ~4096=g25, ~2048=g27
-//  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[0]), 100);
-//  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[1]), 100);
-//  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[2]), 100);
-  if (ADCValue[2] > 3850){
-	  spi_select = 1;
+  ADCValue[0] = HAL_ADC_GetValue(&hadc1); 					// leitura do axis x cambio
+  ADCValue[1] = HAL_ADC_GetValue(&hadc1); 					// leitura do axis y cambio
+  if (spi_detection == 1){
+	  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);  //descarga para seleção do G27
+	  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);
+	  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);
+	  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);
+	  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);
+	  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);
   }
-  else
-  {
-	  spi_select = 2;
+  else {
+	  HAL_SPI_Receive(&hspi2, rx_buffer, 3, 1);  // descarga para seleção do G25
+	  HAL_SPI_Receive(&hspi2, rx_buffer, 3, 1);
+	  HAL_SPI_Receive(&hspi2, rx_buffer, 3, 1);
+	  HAL_SPI_Receive(&hspi2, rx_buffer, 3, 1);
+	  HAL_SPI_Receive(&hspi2, rx_buffer, 3, 1);
+	  HAL_SPI_Receive(&hspi2, rx_buffer, 3, 1);
   }
+  ADCValue[2] = HAL_ADC_GetValue(&hadc1); // sck pin 9 reading  		>=4093 se desconectado
+  if (spi_detection == 1){											// quando excitado spi1 gera reducao na tensao do cap caso esteja conectado o g27
+	  spi_values[0] = ADCValue[2];
+	  spi_detection = 2;
+  }
+  else{
+	  spi_values[1] = ADCValue[2];									// quando excitado spi2 gera reducao na tensao do cap caso esteja conectado o g25
+	  spi_detection = 1;
+  }
+
+  //  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[0]), 100);
+  //  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[1]), 100);
+  //  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[2]), 100);
 //  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", spi_select), 100);
 //  HAL_UART_Transmit(&huart1, "      ", 6, 100);
 //  HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
   HAL_Delay(1);
 }
 
-void LerSPI(int select){
+void LerSPI(){
   HAL_GPIO_WritePin(SHIFTER_CS_GPIO_Port, SHIFTER_CS_Pin, GPIO_PIN_SET);
   HAL_Delay(1);
-  select = 1; // for working with g27
-  if (select == 1){
-    HAL_SPI_Receive(&hspi1, rx_buffer, 3, 50);
+  if (spi_values[0] < spi_values[1]){ 					// significa que está conectado o G27
+	  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 50);
   }
-  if (select == 2){
-    HAL_SPI_Receive(&hspi2, rx_buffer, 3, 50);
+  else{													// significa que está conectado o G25
+	  HAL_SPI_Receive(&hspi2, rx_buffer, 3, 50);
   }
   HAL_Delay(1);
   HAL_GPIO_WritePin(SHIFTER_CS_GPIO_Port, SHIFTER_CS_Pin, GPIO_PIN_RESET);
   HAL_Delay(1);
 
-  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", rx_buffer[0]), 100);
-  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", rx_buffer[1]), 100);
-  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", rx_buffer[2]), 100);
-  HAL_UART_Transmit(&huart1, "      ", 6, 100);
-  HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
+  //HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", rx_buffer[0]), 100);
+  //HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", rx_buffer[1]), 100);
+  //HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", rx_buffer[2]), 100);
+  //HAL_UART_Transmit(&huart1, "      ", 6, 100);
+  //HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
 }
 
 void Calibrar(void)
 {
 	if (HAL_GPIO_ReadPin(CALIB_BUTTON_GPIO_Port, CALIB_BUTTON_Pin)){			// se botão de calibração pressionado
 		HAL_Delay(500);
+		char params_to_save[50];
 		uint16_t axis_x_min_max[2] = {9999, 0};
 		uint16_t axis_y_min_max[2] = {9999, 0};
 		while (HAL_GPIO_ReadPin(CALIB_BUTTON_GPIO_Port, CALIB_BUTTON_Pin)){     // permanece na rotina de leitura até que o botão seja solto
@@ -228,22 +242,23 @@ void Calibrar(void)
 
 		uint16_t space_x = (axis_x_min_max[1]-axis_x_min_max[0])/3;
 		speed_div_x[0] = axis_x_min_max[0] + space_x; 					//calcula as linhas de calibracao do eixo x
-		//HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", speed_div_x[0]), 100);
 
 		speed_div_x[1] = axis_x_min_max[1] - space_x;
-		//HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", speed_div_x[1]), 100);
 
 		uint16_t space_y = (axis_y_min_max[1]-axis_y_min_max[0])/3;
 		speed_div_y[0] = axis_y_min_max[0] + space_y; 					//calcula as linhas de calibracao do eixo y
-		//HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", speed_div_y[0]), 100);
 
 		speed_div_y[1] = axis_y_min_max[1] - space_y;
-		//HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", speed_div_y[1]), 100);
-		//HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
+
+		sprintf(params_to_save, "%u,%u,%u,%u", speed_div_x[0], speed_div_x[1], speed_div_y[0], speed_div_y[1]);
+		save_to_flash((uint8_t *)params_to_save);
+		HAL_UART_Transmit(&huart1, (uint8_t)params_to_save, (int)sizeof(params_to_save), 100);
+		HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
+
 	}
 }
 
-void update_data_from_flash(uint16_t (* speed_div_x), uint16_t (* speed_div_y)){
+void update_data_from_flash(uint16_t (* speed_div_x), uint16_t (* speed_div_y)){									// PRECISA FINALIZAR ANTES DE TESTAR
 	char data[0xC0];
 	read_flash((uint8_t *)data);
     char * token = strtok(data,",");				//first strtok go to variable directly
@@ -288,7 +303,9 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADCValue, 3);
-  HAL_GPIO_WritePin(LED_PIN_GPIO_Port, LED_PIN_Pin, 0); //liga led
+  HAL_GPIO_WritePin(LED_PIN_GPIO_Port, LED_PIN_Pin, 0); 		//liga led
+  update_data_from_flash(speed_div_x, speed_div_y);				//atualiza valores com os dados da memoria flash
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -298,13 +315,9 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  if (read_flash_flag){
-		  read_flash_flag = 0;
-		  update_data_from_flash(speed_div_x, speed_div_y);				//atualiza valores com os dados da memoria flash
-	  }
 	  Calibrar();
 	  LerADCS();
-	  LerSPI(spi_select);
+	  LerSPI();
 
 	  uint16_t cambio_x_axis = (uint16_t) ADCValue[0];  //manopla x
 	  uint16_t cambio_y_axis = (uint16_t) ADCValue[1];  //manopla y
