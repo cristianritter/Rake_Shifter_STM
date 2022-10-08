@@ -47,6 +47,7 @@
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
+
 SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi2;
 
@@ -150,32 +151,29 @@ joystickHID joystickhid = {0, 0, 0, 0, 0, 0, 0, 0};
 uint8_t read_flash_flag = 1;							// ativa o carregamento de informaçoes da memoria flash
 uint8_t spi_detection = 1;								// informa qual spi será testado neste ciclo para deteccao do modelo do shifter
 uint16_t spi_values[2] = {0, 0};
-uint16_t speed_div_x[2] = {800, 1450};					// pré definicao dos limites de selecao de velocidades do eixo x
-uint16_t speed_div_y[2] = {900, 2000};					//  -		-		-		-		-		-		-		-  y
+uint16_t speed_div_x[2] = {1362, 2408};					// pré definicao dos limites de selecao de velocidades do eixo x
+uint16_t speed_div_y[2] = {1117, 2824};					//  -		-		-		-		-		-		-		-  y
 uint16_t ADCValue[3] = {0, 0, 0};
 int8_t buffer2[6];
-uint8_t rx_buffer[3];
+uint8_t rx_buffer[2];
 
 void LerADCS(){
-  ADCValue[0] = HAL_ADC_GetValue(&hadc1); 					// leitura do axis x cambio
-  ADCValue[1] = HAL_ADC_GetValue(&hadc1); 					// leitura do axis y cambio
   if (spi_detection == 1){
-	  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);  //descarga para seleção do G27
-	  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);
-	  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);
-	  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);
-	  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);
-	  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 1);
+	  HAL_SPI_Receive(&hspi1, rx_buffer, 2, 1);  //descarga para seleção do G27
+	  HAL_SPI_Receive(&hspi1, rx_buffer, 2, 1);
+	  HAL_SPI_Receive(&hspi1, rx_buffer, 2, 1);
+	  HAL_SPI_Receive(&hspi1, rx_buffer, 2, 1);
+	  HAL_SPI_Receive(&hspi1, rx_buffer, 2, 1);
+	  HAL_SPI_Receive(&hspi1, rx_buffer, 2, 1);
   }
   else {
-	  HAL_SPI_Receive(&hspi2, rx_buffer, 3, 1);  // descarga para seleção do G25
-	  HAL_SPI_Receive(&hspi2, rx_buffer, 3, 1);
-	  HAL_SPI_Receive(&hspi2, rx_buffer, 3, 1);
-	  HAL_SPI_Receive(&hspi2, rx_buffer, 3, 1);
-	  HAL_SPI_Receive(&hspi2, rx_buffer, 3, 1);
-	  HAL_SPI_Receive(&hspi2, rx_buffer, 3, 1);
+	  HAL_SPI_Receive(&hspi2, rx_buffer, 2, 1);  // descarga para seleção do G25
+	  HAL_SPI_Receive(&hspi2, rx_buffer, 2, 1);
+	  HAL_SPI_Receive(&hspi2, rx_buffer, 2, 1);
+	  HAL_SPI_Receive(&hspi2, rx_buffer, 2, 1);
+	  HAL_SPI_Receive(&hspi2, rx_buffer, 2, 1);
+	  HAL_SPI_Receive(&hspi2, rx_buffer, 2, 1);
   }
-  ADCValue[2] = HAL_ADC_GetValue(&hadc1); // sck pin 9 reading  		>=4093 se desconectado
   if (spi_detection == 1){											// quando excitado spi1 gera reducao na tensao do cap caso esteja conectado o g27
 	  spi_values[0] = ADCValue[2];
 	  spi_detection = 2;
@@ -187,41 +185,51 @@ void LerADCS(){
 
   //  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[0]), 100);
   //  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[1]), 100);
-  //  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[2]), 100);
-//  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", spi_select), 100);
-//  HAL_UART_Transmit(&huart1, "      ", 6, 100);
-//  HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
-  HAL_Delay(1);
+  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", ADCValue[2]), 100);
+  //HAL_UART_Transmit(&huart1, "      ", 6, 100);
+  //HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
+  HAL_Delay(100);
 }
 
 void LerSPI(){
   HAL_GPIO_WritePin(SHIFTER_CS_GPIO_Port, SHIFTER_CS_Pin, GPIO_PIN_SET);
   HAL_Delay(1);
-  if (spi_values[0] < spi_values[1]){ 					// significa que está conectado o G27
-	  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 50);
-  }
-  else{													// significa que está conectado o G25
-	  HAL_SPI_Receive(&hspi2, rx_buffer, 3, 50);
-  }
+  HAL_SPI_Receive(&hspi1, rx_buffer, 2, 50);
+
+  //if (spi_values[0] == spi_values[1]){
+//	  HAL_UART_Transmit(&huart1, "DESCON", 6, 100);
+//	  HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
+	//  return;
+ // }
+ // else if (spi_values[0] < spi_values[1]){ 					// significa que está conectado o G27
+//	  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 50);
+//	  HAL_UART_Transmit(&huart1, "G27   ", 6, 100);
+//	  HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
+ // }
+  //else{													// significa que está conectado o G25
+//	  HAL_SPI_Receive(&hspi2, rx_buffer, 3, 50);
+//	  HAL_UART_Transmit(&huart1, "G25   ", 6, 100);
+//	  HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
+ // }
+
   HAL_Delay(1);
   HAL_GPIO_WritePin(SHIFTER_CS_GPIO_Port, SHIFTER_CS_Pin, GPIO_PIN_RESET);
   HAL_Delay(1);
 
-  //HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", rx_buffer[0]), 100);
-  //HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", rx_buffer[1]), 100);
-  //HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", rx_buffer[2]), 100);
-  //HAL_UART_Transmit(&huart1, "      ", 6, 100);
-  //HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
+  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", rx_buffer[0]), 100);
+  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", rx_buffer[1]), 100);
+  HAL_UART_Transmit(&huart1, "      ", 6, 100);
+  HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
 }
 
 void Calibrar(void)
 {
-	if (HAL_GPIO_ReadPin(CALIB_BUTTON_GPIO_Port, CALIB_BUTTON_Pin)){			// se botão de calibração pressionado
+	if (!HAL_GPIO_ReadPin(CALIB_BUTTON_GPIO_Port, CALIB_BUTTON_Pin)){			// se botão de calibração pressionado
 		HAL_Delay(500);
 		char params_to_save[50];
 		uint16_t axis_x_min_max[2] = {9999, 0};
 		uint16_t axis_y_min_max[2] = {9999, 0};
-		while (HAL_GPIO_ReadPin(CALIB_BUTTON_GPIO_Port, CALIB_BUTTON_Pin)){     // permanece na rotina de leitura até que o botão seja solto
+		while (!HAL_GPIO_ReadPin(CALIB_BUTTON_GPIO_Port, CALIB_BUTTON_Pin)){     // permanece na rotina de leitura até que o botão seja solto
 			HAL_GPIO_TogglePin(LED_PIN_GPIO_Port, LED_PIN_Pin);
 			HAL_Delay(50);
 			LerADCS();  									//le posicao dos eixos
@@ -241,19 +249,19 @@ void Calibrar(void)
 		HAL_GPIO_WritePin(LED_PIN_GPIO_Port, LED_PIN_Pin, 0);
 
 		uint16_t space_x = (axis_x_min_max[1]-axis_x_min_max[0])/3;
-		speed_div_x[0] = axis_x_min_max[0] + space_x; 					//calcula as linhas de calibracao do eixo x
+		speed_div_x[0] = axis_x_min_max[0] + (space_x*0.8); 					//calcula as linhas de calibracao do eixo x
 
-		speed_div_x[1] = axis_x_min_max[1] - space_x;
+		speed_div_x[1] = axis_x_min_max[1] - (space_x*0.8);
 
 		uint16_t space_y = (axis_y_min_max[1]-axis_y_min_max[0])/3;
-		speed_div_y[0] = axis_y_min_max[0] + space_y; 					//calcula as linhas de calibracao do eixo y
+		speed_div_y[0] = axis_y_min_max[0] + (space_y*0.8); 					//calcula as linhas de calibracao do eixo y
 
-		speed_div_y[1] = axis_y_min_max[1] - space_y;
+		speed_div_y[1] = axis_y_min_max[1] - (space_y*0.8);
 
 		sprintf(params_to_save, "%u,%u,%u,%u", speed_div_x[0], speed_div_x[1], speed_div_y[0], speed_div_y[1]);
 		save_to_flash((uint8_t *)params_to_save);
-		HAL_UART_Transmit(&huart1, (uint8_t)params_to_save, (int)sizeof(params_to_save), 100);
-		HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
+		HAL_UART_Transmit(&huart1, (uint8_t *)params_to_save, (int)sizeof(params_to_save), 100);
+		HAL_UART_Transmit(&huart1, (uint8_t *)"\r\n ", 2, 100);
 
 	}
 }
@@ -304,7 +312,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADCValue, 3);
   HAL_GPIO_WritePin(LED_PIN_GPIO_Port, LED_PIN_Pin, 0); 		//liga led
-  update_data_from_flash(speed_div_x, speed_div_y);				//atualiza valores com os dados da memoria flash
+  //update_data_from_flash(speed_div_x, speed_div_y);				//atualiza valores com os dados da memoria flash
 
   /* USER CODE END 2 */
 
@@ -364,91 +372,91 @@ int main(void)
 		  joystickhid.botoes0 &= ~(uint8_t)(1<<5);	// RESETA BOTAO 6
 	  }
 
-	  if (rx_buffer[2] & (uint16_t)(1<<0))  {
+	  if (rx_buffer[1] & (uint16_t)(1<<0))  {
 		  joystickhid.botoes0 |= (uint16_t) (1<<6);  // SETA BOTAO 7
 	  }
 	  else {
 		  joystickhid.botoes0 &= ~(uint16_t)(1<<6);	// RESETA BOTAO 7
 	  }
 
-	  if (rx_buffer[2] & (uint16_t)(1<<1))  {
+	  if (rx_buffer[1] & (uint16_t)(1<<1))  {
 		  joystickhid.botoes0 |= (uint16_t)(1<<7);	// SETA BOTAO 8
 	  }
 	  else {
 		  joystickhid.botoes0 &= ~(uint16_t)(1<<7);	// RESETA BOTAO 8
 	  }
 
-	  if (rx_buffer[2] & (uint16_t)(1<<2))  {
+	  if (rx_buffer[1] & (uint16_t)(1<<2))  {
 		  joystickhid.botoes1 |= (uint16_t)(1<<0);	// SETA BOTAO 9
 	  }
 	  else {
 		  joystickhid.botoes1 &= ~(uint16_t)(1<<0);	// RESETA BOTAO 9
 	  }
 
-	  if (rx_buffer[2] & (uint16_t)(1<<3))  {
+	  if (rx_buffer[1] & (uint16_t)(1<<3))  {
 		  joystickhid.botoes1 |= (uint16_t)(1<<1);	// SETA BOTAO 10
 	  }
 	  else {
 		  joystickhid.botoes1 &= ~(uint16_t)(1<<1);	// RESETA BOTAO 10
 	  }
 
-	  if (rx_buffer[2] & (uint16_t)(1<<4))  {
+	  if (rx_buffer[1] & (uint16_t)(1<<4))  {
 		  joystickhid.botoes1 |= (uint16_t)(1<<2);	// SETA BOTAO 11
 	  }
 	  else {
 		  joystickhid.botoes1 &= ~(uint16_t)(1<<2);	// RESETA BOTAO 11
 	  }
 
-	  if (rx_buffer[2] & (uint16_t)(1<<5))  {
+	  if (rx_buffer[1] & (uint16_t)(1<<5))  {
 		  joystickhid.botoes1 |= (uint16_t)(1<<3);	// SETA BOTAO 12
 	  }
 	  else {
 		  joystickhid.botoes1 &= ~(uint16_t)(1<<3);	// RESETA BOTAO 12
 	  }
 
-	  if (rx_buffer[2] & (uint16_t)(1<<6))  {
+	  if (rx_buffer[1] & (uint16_t)(1<<6))  {
 		  joystickhid.botoes1 |= (uint16_t)(1<<4);	// SETA BOTAO 13
 	  }
 	  else {
 		  joystickhid.botoes1 &= ~(uint16_t)(1<<4);	// RESETA BOTAO 13
 	  }
 
-	  if (rx_buffer[2] & (uint16_t)(1<<7))  {
+	  if (rx_buffer[1] & (uint16_t)(1<<7))  {
 		  joystickhid.botoes1 |= (uint16_t)(1<<5);	// SETA BOTAO 14
 	  }
 	  else {
 		  joystickhid.botoes1 &= ~(uint16_t)(1<<5);	// RESETA BOTAO 14
 	  }
 
-	  if (rx_buffer[1] & (uint16_t)(1<<0))  {
+	  if (rx_buffer[0] & (uint16_t)(1<<0))  {
 		  joystickhid.botoes1 |= (uint16_t)(1<<6);	// SETA BOTAO 15
 	  }
 	  else {
 		  joystickhid.botoes1 &= ~(uint16_t)(1<<6);	// RESETA BOTAO 15
 	  }
 
-	  if (rx_buffer[1] & (uint16_t)(1<<1))  {
+	  if (rx_buffer[0] & (uint16_t)(1<<1))  {
 		  joystickhid.botoes1 |= (uint32_t)(1<<7);	// SETA BOTAO 16
 	  }
 	  else {
 		  joystickhid.botoes1 &= ~(uint16_t)(1<<7);	// RESETA BOTAO 16
 	  }
 
-	  if (rx_buffer[1] & (uint16_t)(1<<2))  {
+	  if (rx_buffer[0] & (uint16_t)(1<<2))  {
 		  joystickhid.botoes_freio0 |= (uint16_t)(1<<0);	// SETA BOTAO 17
 	  }
 	  else {
 		  joystickhid.botoes_freio0 &= ~(uint16_t)(1<<0);	// RESETA BOTAO 17
 	  }
 
-	  if (rx_buffer[1] & (uint16_t)(1<<3))  {
+	  if (rx_buffer[0] & (uint16_t)(1<<3))  {
 		  joystickhid.botoes_freio0 |= (uint32_t)(1<<1);	// SETA BOTAO 18
 	  }
 	  else {
 		  joystickhid.botoes_freio0 &= ~(uint16_t)(1<<1);	// RESETA BOTAO 18
 	  }
 
-	  if (rx_buffer[1] & (uint16_t)(1<<6) && cambio_x_axis > speed_div_x[1] && cambio_y_axis < speed_div_y[0])  {
+	  if (rx_buffer[0] & (uint16_t)(1<<6) && cambio_x_axis > speed_div_x[1] && cambio_y_axis < speed_div_y[0])  {
 		  joystickhid.botoes_freio0 |= (uint16_t)(1<<2);	// SETA BOTAO 19 SPEED REVERSA
 		  joystickhid.botoes0 &= ~(uint8_t)(1<<5); 			// RESETA BOTAO SPEED 6 QUANDO ATIVA A REVERSA
 	  }
@@ -456,15 +464,8 @@ int main(void)
 		  joystickhid.botoes_freio0 &= ~(uint32_t)(1<<2);	// RESETA BOTAO 19 SPEED REVERSA
 	  }
 
-	  //if ( !HAL_GPIO_ReadPin(GPIOC, sw_ext_Pin)){
-	//	  joystickhid.botoes_freio0 |= (uint32_t)(1<<3);
-	 // }
-	  //else{
-	//	  joystickhid.botoes_freio0 &= ~(uint32_t)(1<<3);
-	 // }
 
-
-	  //if ( ADCValue[3] > 4090){  //se volante desconectado
+	  //if ( ADCValue[3] > 4093){  //se volante desconectado
 	  //joystickhid.botoes0 = 0xff;
 	  //	  joystickhid.botoes1 = 0;
 	  	//  joystickhid.botoes_freio0 &= 0b11110000;
@@ -608,12 +609,12 @@ static void MX_SPI1_Init(void)
   /* SPI1 parameter configuration*/
   hspi1.Instance = SPI1;
   hspi1.Init.Mode = SPI_MODE_MASTER;
-  hspi1.Init.Direction = SPI_DIRECTION_2LINES_RXONLY;
+  hspi1.Init.Direction = SPI_DIRECTION_2LINES;
   hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
   hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -648,10 +649,10 @@ static void MX_SPI2_Init(void)
   hspi2.Init.Mode = SPI_MODE_MASTER;
   hspi2.Init.Direction = SPI_DIRECTION_2LINES_RXONLY;
   hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi2.Init.CLKPolarity = SPI_POLARITY_HIGH;
   hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi2.Init.NSS = SPI_NSS_SOFT;
-  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
   hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -731,24 +732,27 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(CALIB_BUTTON_GPIO_Port, CALIB_BUTTON_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, SHIFTER_CS_Pin|LED_PIN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : CALIB_BUTTON_Pin */
   GPIO_InitStruct.Pin = CALIB_BUTTON_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(CALIB_BUTTON_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : SHIFTER_CS_Pin LED_PIN_Pin */
-  GPIO_InitStruct.Pin = SHIFTER_CS_Pin|LED_PIN_Pin;
+  /*Configure GPIO pin : SHIFTER_CS_Pin */
+  GPIO_InitStruct.Pin = SHIFTER_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(SHIFTER_CS_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : LED_PIN_Pin */
+  GPIO_InitStruct.Pin = LED_PIN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  HAL_GPIO_Init(LED_PIN_GPIO_Port, &GPIO_InitStruct);
 
 }
 
