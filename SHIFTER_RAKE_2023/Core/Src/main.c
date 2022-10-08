@@ -158,66 +158,62 @@ int8_t buffer2[6];
 uint8_t rx_buffer[2];
 
 void LerADCS(){
-  if (spi_detection == 1){
+	//Este trecho testa somente um spi por round, evitando perca de tempo
+	if (spi_detection == 1){
 	  HAL_SPI_Receive(&hspi1, rx_buffer, 2, 1);  //descarga para seleção do G27
 	  HAL_SPI_Receive(&hspi1, rx_buffer, 2, 1);
-	  HAL_SPI_Receive(&hspi1, rx_buffer, 2, 1);
-	  HAL_SPI_Receive(&hspi1, rx_buffer, 2, 1);
-	  HAL_SPI_Receive(&hspi1, rx_buffer, 2, 1);
-	  HAL_SPI_Receive(&hspi1, rx_buffer, 2, 1);
-  }
-  else {
+		 }
+	else {
 	  HAL_SPI_Receive(&hspi2, rx_buffer, 2, 1);  // descarga para seleção do G25
 	  HAL_SPI_Receive(&hspi2, rx_buffer, 2, 1);
-	  HAL_SPI_Receive(&hspi2, rx_buffer, 2, 1);
-	  HAL_SPI_Receive(&hspi2, rx_buffer, 2, 1);
-	  HAL_SPI_Receive(&hspi2, rx_buffer, 2, 1);
-	  HAL_SPI_Receive(&hspi2, rx_buffer, 2, 1);
-  }
-  if (spi_detection == 1){											// quando excitado spi1 gera reducao na tensao do cap caso esteja conectado o g27
+	 }
+	//Este trecho salva o valor da tensao do capacitor em cada teste
+	if (spi_detection == 1){						// se estiver conectado g25 este valor reduz, pois o jumper entre os pinos 1 [spi1] e 9 [cap] faz isso.
 	  spi_values[0] = ADCValue[2];
 	  spi_detection = 2;
-  }
-  else{
+	}
+	else{											// se estiver conectado g27 este valor reduz, pois o jumper entre os pinos 7 [spi2] e 9 [cap] faz isso.
 	  spi_values[1] = ADCValue[2];									// quando excitado spi2 gera reducao na tensao do cap caso esteja conectado o g25
 	  spi_detection = 1;
-  }
+	}
 
   //  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[0]), 100);
   //  HAL_UART_Transmit(&huart1, buffer, sprintf(buffer, "%d ", ADCValue[1]), 100);
-  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", ADCValue[2]), 100);
+//  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", ADCValue[2]), 100);
   //HAL_UART_Transmit(&huart1, "      ", 6, 100);
   //HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
-  HAL_Delay(100);
+  HAL_Delay(1);
 }
 
 void LerSPI(){
   HAL_GPIO_WritePin(SHIFTER_CS_GPIO_Port, SHIFTER_CS_Pin, GPIO_PIN_SET);
   HAL_Delay(1);
-  HAL_SPI_Receive(&hspi1, rx_buffer, 2, 50);
+//  HAL_SPI_Receive(&hspi1, rx_buffer, 2, 50);
+  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", spi_values[0]), 100);
+  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", spi_values[1]), 100);
 
-  //if (spi_values[0] == spi_values[1]){
-//	  HAL_UART_Transmit(&huart1, "DESCON", 6, 100);
+  if (spi_values[0] - spi_values[1] > -10 && spi_values[0] - spi_values[1] < 10){
+	  HAL_UART_Transmit(&huart1, "DESCON", 6, 100);
 //	  HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
 	//  return;
- // }
- // else if (spi_values[0] < spi_values[1]){ 					// significa que está conectado o G27
-//	  HAL_SPI_Receive(&hspi1, rx_buffer, 3, 50);
-//	  HAL_UART_Transmit(&huart1, "G27   ", 6, 100);
+  }
+  else if (spi_values[0] < spi_values[1]){ 					// significa que está conectado o G27
+	  HAL_SPI_Receive(&hspi2, rx_buffer, 2, 50);
+	  HAL_UART_Transmit(&huart1, "G25   ", 6, 100);
 //	  HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
- // }
-  //else{													// significa que está conectado o G25
-//	  HAL_SPI_Receive(&hspi2, rx_buffer, 3, 50);
-//	  HAL_UART_Transmit(&huart1, "G25   ", 6, 100);
+  }
+  else{													// significa que está conectado o G25
+	  HAL_SPI_Receive(&hspi1, rx_buffer, 2, 50);
+	  HAL_UART_Transmit(&huart1, "G27   ", 6, 100);
 //	  HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
- // }
+  }
 
   HAL_Delay(1);
   HAL_GPIO_WritePin(SHIFTER_CS_GPIO_Port, SHIFTER_CS_Pin, GPIO_PIN_RESET);
   HAL_Delay(1);
 
-  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", rx_buffer[0]), 100);
-  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", rx_buffer[1]), 100);
+//  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", rx_buffer[0]), 100);
+//  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", rx_buffer[1]), 100);
   HAL_UART_Transmit(&huart1, "      ", 6, 100);
   HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
 }
@@ -230,7 +226,7 @@ void Calibrar(void)
 		uint16_t axis_x_min_max[2] = {9999, 0};
 		uint16_t axis_y_min_max[2] = {9999, 0};
 		while (!HAL_GPIO_ReadPin(CALIB_BUTTON_GPIO_Port, CALIB_BUTTON_Pin)){     // permanece na rotina de leitura até que o botão seja solto
-			HAL_GPIO_TogglePin(LED_PIN_GPIO_Port, LED_PIN_Pin);
+			HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 			HAL_Delay(50);
 			LerADCS();  									//le posicao dos eixos
 			if (ADCValue[0] < axis_x_min_max[0]){			// define o menor valor detectado no eixo x
@@ -246,7 +242,7 @@ void Calibrar(void)
 				axis_y_min_max[1] = ADCValue[1];
 			}
 		}
-		HAL_GPIO_WritePin(LED_PIN_GPIO_Port, LED_PIN_Pin, 0);
+		HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
 
 		uint16_t space_x = (axis_x_min_max[1]-axis_x_min_max[0])/3;
 		speed_div_x[0] = axis_x_min_max[0] + (space_x*0.8); 					//calcula as linhas de calibracao do eixo x
@@ -258,7 +254,7 @@ void Calibrar(void)
 
 		speed_div_y[1] = axis_y_min_max[1] - (space_y*0.8);
 
-		sprintf(params_to_save, "%u,%u,%u,%u", speed_div_x[0], speed_div_x[1], speed_div_y[0], speed_div_y[1]);
+		sprintf(params_to_save, "%u,%u,%u,%u,", speed_div_x[0], speed_div_x[1], speed_div_y[0], speed_div_y[1]);
 		save_to_flash((uint8_t *)params_to_save);
 		HAL_UART_Transmit(&huart1, (uint8_t *)params_to_save, (int)sizeof(params_to_save), 100);
 		HAL_UART_Transmit(&huart1, (uint8_t *)"\r\n ", 2, 100);
@@ -269,8 +265,18 @@ void Calibrar(void)
 void update_data_from_flash(uint16_t (* speed_div_x), uint16_t (* speed_div_y)){									// PRECISA FINALIZAR ANTES DE TESTAR
 	char data[0xC0];
 	read_flash((uint8_t *)data);
-    char * token = strtok(data,",");				//first strtok go to variable directly
-    speed_div_x[0] = atoi(token)*10;
+	char * token = strtok(data,",");				//first strtok go to variable directly
+    if (atoi(token)==0){
+    	return;
+    }
+	speed_div_x[0] = atoi(token);
+    token = strtok(NULL,",");
+    speed_div_x[1] = atoi(token);
+    token = strtok(NULL,",");
+    speed_div_y[0] = atoi(token);
+    token = strtok(NULL,",");
+    speed_div_y[1] = atoi(token);
+
 }
 
 /* USER CODE END 0 */
@@ -311,8 +317,8 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADCValue, 3);
-  HAL_GPIO_WritePin(LED_PIN_GPIO_Port, LED_PIN_Pin, 0); 		//liga led
-  //update_data_from_flash(speed_div_x, speed_div_y);				//atualiza valores com os dados da memoria flash
+  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0); 		//liga led
+  update_data_from_flash(speed_div_x, speed_div_y);				//atualiza valores com os dados da memoria flash
 
   /* USER CODE END 2 */
 
@@ -326,6 +332,10 @@ int main(void)
 	  Calibrar();
 	  LerADCS();
 	  LerSPI();
+	  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", speed_div_x[0]), 100);
+	  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", speed_div_x[1]), 100);
+	  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", speed_div_y[0]), 100);
+	  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", speed_div_y[1]), 100);
 
 	  uint16_t cambio_x_axis = (uint16_t) ADCValue[0];  //manopla x
 	  uint16_t cambio_y_axis = (uint16_t) ADCValue[1];  //manopla y
@@ -465,11 +475,11 @@ int main(void)
 	  }
 
 
-	  //if ( ADCValue[3] > 4093){  //se volante desconectado
-	  //joystickhid.botoes0 = 0xff;
-	  //	  joystickhid.botoes1 = 0;
-	  	//  joystickhid.botoes_freio0 &= 0b11110000;
-	 // }
+	  if (spi_values[0] > 4000 && spi_values[1] > 4000){  //se volante desconectado
+		  joystickhid.botoes0 = 0;
+	  	  joystickhid.botoes1 = 0;
+	  	  joystickhid.botoes_freio0 = 0;
+	  }
 
 	  USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, &joystickhid, sizeof(joystickhid));
 
@@ -647,7 +657,7 @@ static void MX_SPI2_Init(void)
   /* SPI2 parameter configuration*/
   hspi2.Instance = SPI2;
   hspi2.Init.Mode = SPI_MODE_MASTER;
-  hspi2.Init.Direction = SPI_DIRECTION_2LINES_RXONLY;
+  hspi2.Init.Direction = SPI_DIRECTION_2LINES;
   hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
   hspi2.Init.CLKPolarity = SPI_POLARITY_HIGH;
   hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
@@ -732,7 +742,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, SHIFTER_CS_Pin|LED_PIN_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, SHIFTER_CS_Pin|LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : CALIB_BUTTON_Pin */
   GPIO_InitStruct.Pin = CALIB_BUTTON_Pin;
@@ -747,12 +757,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(SHIFTER_CS_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : LED_PIN_Pin */
-  GPIO_InitStruct.Pin = LED_PIN_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  /*Configure GPIO pin : LED_Pin */
+  GPIO_InitStruct.Pin = LED_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LED_PIN_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
 
 }
 
