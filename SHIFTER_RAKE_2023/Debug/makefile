@@ -64,8 +64,8 @@ all: main-build
 main-build: SHIFTER_RAKE_2023.elf secondary-outputs
 
 # Tool invocations
-SHIFTER_RAKE_2023.elf SHIFTER_RAKE_2023.map: $(OBJS) $(USER_OBJS) C:\Users\cristian_ritter\Documents\PROJETOS\SHIFTER_RAKE_STM\SHIFTER_RAKE_2023\STM32F103C8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "SHIFTER_RAKE_2023.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"C:\Users\cristian_ritter\Documents\PROJETOS\SHIFTER_RAKE_STM\SHIFTER_RAKE_2023\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="SHIFTER_RAKE_2023.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+SHIFTER_RAKE_2023.elf SHIFTER_RAKE_2023.map: $(OBJS) $(USER_OBJS) D:\VSCODE_WORKSPACE\Rake_Shifter_STM\SHIFTER_RAKE_2023\STM32F103C8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "SHIFTER_RAKE_2023.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"D:\VSCODE_WORKSPACE\Rake_Shifter_STM\SHIFTER_RAKE_2023\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="SHIFTER_RAKE_2023.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

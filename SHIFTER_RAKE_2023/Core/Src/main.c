@@ -466,6 +466,12 @@ int main(void)
 		  joystickhid.botoes_freio0 &= ~(uint16_t)(1<<1);	// RESETA BOTAO 18
 	  }
 
+	  if (rx_buffer[1] & (uint16_t)(11111111)){ //desativa botoes ao engatar reversa no g29
+		  joystickhid.botoes0 = 0;
+		  joystickhid.botoes1 = 0;
+		  joystickhid.botoes_freio0 = 0;
+	  }
+
 	  if (rx_buffer[0] & (uint16_t)(1<<6) && cambio_x_axis > speed_div_x[1] && cambio_y_axis < speed_div_y[0])  {
 		  joystickhid.botoes_freio0 |= (uint16_t)(1<<2);	// SETA BOTAO 19 SPEED REVERSA
 		  joystickhid.botoes0 &= ~(uint8_t)(1<<5); 			// RESETA BOTAO SPEED 6 QUANDO ATIVA A REVERSA
