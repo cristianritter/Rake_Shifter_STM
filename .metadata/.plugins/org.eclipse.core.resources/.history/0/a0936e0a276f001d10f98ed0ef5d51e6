@@ -189,22 +189,22 @@ void LerSPI(){
   HAL_GPIO_WritePin(SHIFTER_CS_GPIO_Port, SHIFTER_CS_Pin, GPIO_PIN_SET);
   HAL_Delay(1);
 //  HAL_SPI_Receive(&hspi1, rx_buffer, 2, 50);
-//  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", spi_values[0]), 100);
-//  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", spi_values[1]), 100);
+  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", spi_values[0]), 100);
+  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", spi_values[1]), 100);
 
   if (spi_values[0] - spi_values[1] > -10 && spi_values[0] - spi_values[1] < 10){
-//	  HAL_UART_Transmit(&huart1, "DESCON", 6, 100);
+	  HAL_UART_Transmit(&huart1, "DESCON", 6, 100);
 //	  HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
 	//  return;
   }
   else if (spi_values[0] < spi_values[1]){ 					// significa que está conectado o G27
 	  HAL_SPI_Receive(&hspi2, rx_buffer, 2, 50);
-//	  HAL_UART_Transmit(&huart1, "G25   ", 6, 100);
+	  HAL_UART_Transmit(&huart1, "G25   ", 6, 100);
 //	  HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
   }
   else{													// significa que está conectado o G25
 	  HAL_SPI_Receive(&hspi1, rx_buffer, 2, 50);
-//	  HAL_UART_Transmit(&huart1, "G27   ", 6, 100);
+	  HAL_UART_Transmit(&huart1, "G27   ", 6, 100);
 //	  HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
   }
 
@@ -214,8 +214,8 @@ void LerSPI(){
 
 //  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", rx_buffer[0]), 100);
 //  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", rx_buffer[1]), 100);
-//  HAL_UART_Transmit(&huart1, "      ", 6, 100);
-//  HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
+  HAL_UART_Transmit(&huart1, "      ", 6, 100);
+  HAL_UART_Transmit(&huart1, "\r\n ", 2, 100);
 }
 
 void Calibrar(void)
@@ -332,10 +332,10 @@ int main(void)
 	  Calibrar();
 	  LerADCS();
 	  LerSPI();
-//	  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", speed_div_x[0]), 100);
-//	  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", speed_div_x[1]), 100);
-//	  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", speed_div_y[0]), 100);
-//	  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", speed_div_y[1]), 100);
+	  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", speed_div_x[0]), 100);
+	  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", speed_div_x[1]), 100);
+	  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", speed_div_y[0]), 100);
+	  HAL_UART_Transmit(&huart1, buffer2, sprintf(buffer2, "%d ", speed_div_y[1]), 100);
 
 	  uint16_t cambio_x_axis = (uint16_t) ADCValue[0];  //manopla x
 	  uint16_t cambio_y_axis = (uint16_t) ADCValue[1];  //manopla y
@@ -466,7 +466,7 @@ int main(void)
 		  joystickhid.botoes_freio0 &= ~(uint16_t)(1<<1);	// RESETA BOTAO 18
 	  }
 
-	  if (rx_buffer[1] == (uint8_t)(11111111)){ //desativa botoes ao engatar reversa no g29
+	  if (rx_buffer[1] == (uint16_t)(11111111)){ //desativa botoes ao engatar reversa no g29
 		  joystickhid.botoes0 = 0;
 		  joystickhid.botoes1 = 0;
 		  joystickhid.botoes_freio0 = 0;

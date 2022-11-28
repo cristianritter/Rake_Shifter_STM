@@ -66,7 +66,7 @@
 #define USBD_LANGID_STRING     1033
 #define USBD_MANUFACTURER_STRING     "CR Software"
 #define USBD_PID_FS     54344
-#define USBD_PRODUCT_STRING_FS     "Rake Shifter"
+#define USBD_PRODUCT_STRING_FS     "RAKE Shifter"
 #define USBD_CONFIGURATION_STRING_FS     "Shifter Rake Config"
 #define USBD_INTERFACE_STRING_FS     "Shifter Rake Interface"
 
