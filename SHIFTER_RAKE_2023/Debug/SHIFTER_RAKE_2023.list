@@ -1994,10 +1994,10 @@ int main(void)
  8001114:	709a      	strb	r2, [r3, #2]
 	  }
 
-	  if (rx_buffer[1] == (uint8_t)(11111111)){ //desativa botoes ao engatar reversa no g29
- 8001116:	4b28      	ldr	r3, [pc, #160]	; (80011b8 <main+0x454>)
+	  if (joystickhid.botoes1 == 0b11111111) { //desativa botoes ao pressionar reversa no g29 verifica se todos os botoes estao ativados ao mesmo tempo e desativa.
+ 8001116:	4b27      	ldr	r3, [pc, #156]	; (80011b4 <main+0x450>)
  8001118:	785b      	ldrb	r3, [r3, #1]
- 800111a:	2bc7      	cmp	r3, #199	; 0xc7
+ 800111a:	2bff      	cmp	r3, #255	; 0xff
  800111c:	d108      	bne.n	8001130 <main+0x3cc>
 		  joystickhid.botoes0 = 0;
  800111e:	4b25      	ldr	r3, [pc, #148]	; (80011b4 <main+0x450>)
