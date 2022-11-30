@@ -327,3 +327,18 @@ java.lang.Exception: File: C:\Users\cristian_ritter\Documents\PROJETOS\SHIFTER_R
 	at com.st.stm32cube.ide.mcu.stackanalyzer.ui.StackAnalyzerView.inputChanged(StackAnalyzerView.java:915)
 	at com.st.stm32cube.ide.mcu.stackanalyzer.ui.StackAnalyzerView.lambda$14(StackAnalyzerView.java:1212)
 	at java.base/java.lang.Thread.run(Thread.java:829)
+!SESSION 2022-11-30 10:38:16.658 -----------------------------------------------
+eclipse.buildId=Version 1.10.1
+java.version=11.0.14.1
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=pt_BR
+Command-line arguments:  -os win32 -ws win32 -arch x86_64
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 4 4 2022-11-30 10:39:17.898
+!MESSAGE CubeMX plugin appears to be active, Log4j initialization might be too late.
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 1 1 2022-11-30 10:39:18.257
+!MESSAGE Log4j initialized with config file C:\Users\cristian_ritter\Documents\PROJETOS\SHIFTER_RAKE_STM\.metadata\.log4j.xml
+
+!ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2022-11-30 10:39:35.408
+!MESSAGE Started RMI Server, listening on port 41337

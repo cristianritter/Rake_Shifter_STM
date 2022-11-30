@@ -748,7 +748,17 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(CALIB_LED_GPIO_Port, CALIB_LED_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, SHIFTER_CS_Pin|LED_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : CALIB_LED_Pin */
+  GPIO_InitStruct.Pin = CALIB_LED_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(CALIB_LED_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : CALIB_BUTTON_Pin */
   GPIO_InitStruct.Pin = CALIB_BUTTON_Pin;

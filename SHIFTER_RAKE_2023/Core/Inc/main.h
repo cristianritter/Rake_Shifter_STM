@@ -57,6 +57,8 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define CALIB_LED_Pin GPIO_PIN_13
+#define CALIB_LED_GPIO_Port GPIOC
 #define CALIB_BUTTON_Pin GPIO_PIN_14
 #define CALIB_BUTTON_GPIO_Port GPIOC
 #define SHIFTER_CS_Pin GPIO_PIN_11
